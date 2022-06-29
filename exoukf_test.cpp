@@ -52,6 +52,10 @@ int main() {
     mat<> eta_sqerr(npass+1, ntrials);
     mat<> lambda_sqerr(npass+1, ntrials);
 
+    mat<> xi_var(npass+1, ntrials);
+    mat<> eta_var(npass+1, ntrials);
+    mat<> lambda_var(npass+1, ntrials);
+    
     std::vector<est_t> ests(npass+1);
         
     est_t est = prior;
@@ -75,12 +79,16 @@ int main() {
 
             vec<7> dx = ests[n].xm - xtru;
 
+            vec<7> var = ests[n].Pxx.diagonal();
+
             xi_sqerr(n, m) = dx.head<4>().squaredNorm();
-
             eta_sqerr(n, m) = dx.segment<2>(4).squaredNorm();
-
             lambda_sqerr(n, m) = dx(6) * dx(6);
 
+            xi_var(n, m) = var.head<4>().sum();
+            eta_var(n, m) = var.segment<2>(4).sum();
+            lambda_var(n, m) = var(6);
+            
         }
 
     }
@@ -93,11 +101,16 @@ int main() {
     vec<> eta_rmse_rel = eta_rmse / xtru.segment<2>(4).norm();
     vec<> lambda_rmse_rel = lambda_rmse / abs(xtru(6));
 
+    vec<> xi_3std_rms = 3 * xi_var.rowwise().mean().cwiseSqrt();
+    vec<> eta_3std_rms = 3 * eta_var.rowwise().mean().cwiseSqrt();
+    vec<> lambda_3std_rms = 3 * lambda_var.rowwise().mean().cwiseSqrt();
+
     vec<> pass = vec<>::LinSpaced(npass+1, 0, npass);
 
-    mat<> table(npass+1, 7);
-    table << pass, xi_rmse, xi_rmse_rel, eta_rmse, eta_rmse_rel, 
-          lambda_rmse, lambda_rmse_rel;
+    mat<> table(npass+1, 10);
+    table << pass, xi_rmse, xi_rmse_rel, xi_3std_rms,
+          eta_rmse, eta_rmse_rel, eta_3std_rms, 
+          lambda_rmse, lambda_rmse_rel, lambda_3std_rms;
 
     eigen_csv::write(table, "results.csv");
 
